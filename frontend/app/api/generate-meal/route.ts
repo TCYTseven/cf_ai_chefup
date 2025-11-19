@@ -1,9 +1,4 @@
 import { NextResponse } from "next/server";
-import Cerebras from "@cerebras/cerebras_cloud_sdk";
-
-const cerebras = new Cerebras({
-    apiKey: process.env.CEREBRAS_API_KEY,
-});
 
 export async function POST(req: Request) {
     try {
@@ -18,59 +13,78 @@ export async function POST(req: Request) {
         }
 
         const prompt = `
-      You are a professional chef AI. Generate a personalized meal recipe based on the following user constraints:
+      You are a world-class chef designing a modern, trendy menu item.
       
       User Profile:
       - Diet: ${userProfile.diet}
       - Allergies: ${userProfile.allergies.join(", ") || "None"}
-      - Time Preference: ${userProfile.timePreference} minutes
-      - Cooking Level: ${userProfile.cookingLevel}
+      - Time: ${userProfile.timePreference} minutes
+      - Skill: ${userProfile.cookingLevel}
       
-      Session Preferences (User answered Yes/No to these tags):
-      ${answers
-                .map((a: any) => `- ${a.questionKey}: ${a.value}`)
-                .join("\n")}
+      Preferences:
+      ${answers.map((a: any) => `- ${a.questionKey}: ${a.value}`).join("\n")}
       
-      Generate ONE single meal recipe in strict JSON format. Do not include any markdown formatting (like \`\`\`json). Just return the raw JSON object.
-      
-      The JSON must match this TypeScript interface:
+      Create a unique, mouth-watering meal.
+      Return ONLY valid JSON matching this structure:
       {
-        "title": string,
-        "summary": string (2 sentences max),
-        "whyItFits": string[] (3 short bullet points explaining why this matches their mood/diet),
-        "ingredients": string[] (list of ingredients with quantities),
-        "steps": string[] (step by step cooking instructions),
-        "estimatedTimeMinutes": number,
-        "difficulty": string ("Easy", "Medium", or "Hard")
+        "title": "Creative Dish Name",
+        "summary": "A short, appetizing description (max 2 sentences).",
+        "whyItFits": ["Reason 1", "Reason 2", "Reason 3"],
+        "ingredients": ["Qty Item", "Qty Item"],
+        "steps": ["Step 1", "Step 2"],
+        "estimatedTimeMinutes": 30,
+        "difficulty": "Medium",
+        "calories": 500
       }
     `;
 
-        const completion = await cerebras.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "llama-3.3-70b",
-            max_completion_tokens: 2048,
-            temperature: 0.7,
-            top_p: 1,
-            stream: false,
-            response_format: { type: "json_object" }
-        });
+        const accountId = process.env.WORKERS_ACCOUNT_ID;
+        const apiToken = process.env.WOERKERS_AI_KEY; // User provided this var name
 
-        const content = completion.choices[0].message.content;
+        // Using Llama 3.1 8B Instruct
+        const response = await fetch(
+            `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${apiToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    messages: [
+                        { role: "system", content: "You are a helpful assistant that outputs only JSON." },
+                        { role: "user", content: prompt }
+                    ],
+                    max_tokens: 2048,
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.text();
+            console.error("Cloudflare AI Error:", err);
+            throw new Error("Failed to fetch from Cloudflare AI");
+        }
+
+        const result = await response.json();
+
+        // Cloudflare AI response structure
+        const content = result.result?.response;
 
         if (!content) {
             throw new Error("No content received from LLM");
         }
 
-        // Parse JSON safely
+        // Attempt to parse JSON (sometimes LLMs add markdown blocks)
+        const jsonString = content.replace(/```json\n?|```/g, "").trim();
         let recipeData;
         try {
-            recipeData = JSON.parse(content);
+            recipeData = JSON.parse(jsonString);
         } catch (e) {
-            console.error("Failed to parse JSON:", content);
+            console.error("Failed to parse JSON:", jsonString);
             return NextResponse.json({ error: "Failed to generate valid JSON" }, { status: 500 });
         }
 
-        // Add generated fields
         const finalResponse = {
             mealId: crypto.randomUUID(),
             createdAt: new Date().toISOString(),
