@@ -10,7 +10,7 @@ import { MealSuggestion } from "@/context/ChefContext";
 export const MealCard = ({ meal }: { meal: MealSuggestion }) => {
     return (
         <Card className="w-full max-w-3xl shadow-2xl">
-            <CardHeader className="flex flex-col items-start px-6 pt-6 pb-0">
+            <CardHeader className="flex flex-col items-start px-4 sm:px-6 pt-6 pb-0">
                 <div className="flex justify-between w-full items-start mb-2">
                     <h2 className="text-3xl font-bold text-primary">{meal.title}</h2>
                     <Chip color="warning" variant="shadow">{meal.difficulty}</Chip>
@@ -30,7 +30,7 @@ export const MealCard = ({ meal }: { meal: MealSuggestion }) => {
 
             <Divider />
 
-            <CardBody className="px-6 py-4 gap-8">
+            <CardBody className="px-4 sm:px-6 py-4 gap-8">
                 <div className="grid md:grid-cols-2 gap-8">
                     <div>
                         <h3 className="text-xl font-bold mb-4 flex items-center gap-2">

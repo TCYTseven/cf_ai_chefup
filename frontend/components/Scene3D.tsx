@@ -79,7 +79,16 @@ function ChefHat(props: any) {
 export default function Scene3D({ onShake }: { onShake?: () => void }) {
     return (
         <div className="w-full h-[400px] cursor-pointer">
-            <Canvas camera={{ position: [0, 0, 6], fov: 50 }}>
+            <Canvas
+                camera={{ position: [0, 0, 6], fov: 50 }}
+                dpr={[1, 2]}
+                gl={{
+                    powerPreference: "default",
+                    preserveDrawingBuffer: true,
+                    antialias: true
+                }}
+                resize={{ scroll: false, debounce: { scroll: 50, resize: 0 } }}
+            >
                 <ambientLight intensity={0.7} />
                 <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
                 <pointLight position={[-10, -10, -10]} intensity={0.5} />

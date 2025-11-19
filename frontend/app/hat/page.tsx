@@ -1,19 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import dynamic from "next/dynamic";
+import { Hat } from "@/components/Hat";
 import { SlipCard } from "@/components/SlipCard";
 import { useChef } from "@/context/ChefContext";
 import { QUESTIONS } from "@/config/questions";
 
-// Dynamically import Scene3D to avoid SSR issues with Three.js
-const Scene3D = dynamic(() => import("@/components/Scene3D"), { ssr: false });
-
 export default function HatPage() {
     const router = useRouter();
-    const { sessionState, addAnswer, setMealSuggestion } = useChef();
+    const { userProfile, sessionState, addAnswer, setMealSuggestion } = useChef();
 
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
     const [showSlip, setShowSlip] = useState(false);
@@ -46,48 +43,29 @@ export default function HatPage() {
         }
     };
 
-    const generateMeal = () => {
+    const generateMeal = async () => {
         setIsGenerating(true);
 
-        // Mock API call / Generation
-        setTimeout(() => {
-            // Mock Meal Data
-            const mockMeal = {
-                mealId: crypto.randomUUID(),
-                title: "Spicy Basil Chicken Stir-Fry",
-                summary: "A quick, aromatic stir-fry that hits the spot with fresh basil and a kick of chili.",
-                whyItFits: [
-                    "Matches your 'Spicy' preference",
-                    "Ready in under 30 minutes",
-                    "High protein for your diet"
-                ],
-                ingredients: [
-                    "2 Chicken Breasts, sliced",
-                    "1 cup Fresh Basil Leaves",
-                    "2 cloves Garlic, minced",
-                    "1 Red Chili, sliced",
-                    "2 tbsp Soy Sauce",
-                    "1 tbsp Oyster Sauce",
-                    "1 tsp Sugar",
-                    "1 tbsp Vegetable Oil",
-                    "Jasmine Rice (for serving)"
-                ],
-                steps: [
-                    "Heat oil in a wok or large pan over high heat.",
-                    "Add garlic and chili, stir-fry for 30 seconds until fragrant.",
-                    "Add chicken slices and stir-fry until cooked through (about 3-4 mins).",
-                    "Add soy sauce, oyster sauce, and sugar. Toss to coat.",
-                    "Remove from heat and immediately stir in basil leaves until wilted.",
-                    "Serve hot over jasmine rice."
-                ],
-                estimatedTimeMinutes: 20,
-                difficulty: "Easy",
-                createdAt: new Date().toISOString(),
-            };
+        try {
+            const response = await fetch("/api/generate-meal", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    userProfile,
+                    answers: sessionState?.answers || []
+                })
+            });
 
-            setMealSuggestion(mockMeal);
+            if (!response.ok) throw new Error("Failed to generate");
+
+            const data = await response.json();
+            setMealSuggestion(data);
             router.push("/meal");
-        }, 2000);
+        } catch (error) {
+            console.error("Generation failed:", error);
+            setIsGenerating(false);
+            alert("Something went wrong while cooking up your recipe. Please try again.");
+        }
     };
 
     if (isGenerating) {
@@ -107,27 +85,35 @@ export default function HatPage() {
 
     return (
         <div className="flex flex-col items-center justify-center h-full min-h-[80vh] relative overflow-hidden">
-            <div className="text-center mb-4 z-10 pointer-events-none">
+            <div className="text-center mb-8 z-10 pointer-events-none">
                 <h1 className="text-4xl font-bold mb-2">The Magic Hat</h1>
                 <p className="text-default-500">Click the hat to draw a slip!</p>
             </div>
 
             <div className="relative z-10 flex flex-col items-center w-full max-w-[500px]">
-                <div className="w-full h-[400px] relative">
-                    <Scene3D onShake={handleDraw} />
-
-                    <AnimatePresence>
-                        {showSlip && (
+                <div className="w-full h-[400px] flex items-center justify-center relative">
+                    <AnimatePresence mode="wait">
+                        {showSlip ? (
                             <motion.div
-                                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20"
+                                key="slip"
+                                className="z-20"
                                 initial={{ opacity: 0, y: 50, scale: 0.5 }}
-                                animate={{ opacity: 1, y: -100, scale: 1 }}
-                                exit={{ opacity: 0, y: -200, scale: 0.5 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -50, scale: 0.5 }}
                             >
                                 <SlipCard
                                     question={questionsToAsk[currentQuestionIndex].text}
                                     onAnswer={handleAnswer}
                                 />
+                            </motion.div>
+                        ) : (
+                            <motion.div
+                                key="hat"
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                            >
+                                <Hat onClick={handleDraw} disabled={false} />
                             </motion.div>
                         )}
                     </AnimatePresence>

@@ -34,11 +34,11 @@ export default function Home() {
           Stop scrolling for recipes. Draw a slip from the Magic Hat and let AI craft the perfect meal for your mood.
         </p>
 
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <Button
             size="lg"
             color="primary"
-            className="font-bold text-lg px-8 py-6 shadow-lg shadow-orange-500/20"
+            className="font-bold text-lg px-8 py-6 shadow-lg shadow-orange-500/20 w-full sm:w-auto"
             endContent={<ArrowRight />}
             onPress={() => router.push("/onboarding")}
           >
@@ -47,7 +47,7 @@ export default function Home() {
           <Button
             size="lg"
             variant="bordered"
-            className="font-bold text-lg px-8 py-6"
+            className="font-bold text-lg px-8 py-6 w-full sm:w-auto"
             as={Link}
             href="https://github.com"
             isExternal
