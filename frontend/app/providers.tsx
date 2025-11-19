@@ -6,6 +6,7 @@ import * as React from "react";
 import { HeroUIProvider } from "@heroui/system";
 import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { ChefProvider } from "@/context/ChefContext";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -25,7 +26,9 @@ export function Providers({ children, themeProps }: ProvidersProps) {
 
   return (
     <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider {...themeProps}>{children}</NextThemesProvider>
+      <NextThemesProvider {...themeProps} defaultTheme="light" attribute="class">
+        <ChefProvider>{children}</ChefProvider>
+      </NextThemesProvider>
     </HeroUIProvider>
   );
 }
